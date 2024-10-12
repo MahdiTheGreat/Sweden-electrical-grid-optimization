@@ -21,6 +21,8 @@ GeneratorsAtNode = Dict(k => [i for i in 1:n if locations[i] == k] for k in 1:m)
 # Consumer data
 consumer_nodes = [1, 4, 6, 8, 9, 10, 11]
 active_power_demand = [0.10, 0.19, 0.11, 0.09, 0.21, 0.05, 0.04]
+#= QUESTION: What happens when we transfer power on the same node? no reactive power gets produced?
+Do we need to also keep track of consumer node locations?=#
 
 # Map demands to nodes
 function safe_sum(iterator)
@@ -31,7 +33,8 @@ function safe_sum(iterator)
     return s
 end
 
-DemandAtNode = Dict(k => safe_sum(active_power_demand[j] for j in 1:length(consumer_nodes) if consumer_nodes[j] == k) for k in 1:m)
+DemandAtNode = Dict(k => safe_sum(active_power_demand[j] 
+for j in 1:length(consumer_nodes) if consumer_nodes[j] == k) for k in 1:m)
 
 # Voltage and phase angle limits
 voltage_limits = (0.98, 1.02)
@@ -46,6 +49,7 @@ b_kl = [-20.1, -22.3, -16.8, -17.2, -11.7, -19.4, -10.8, -12.3, -9.2, -13.9, -8.
 g_kl = Float64.(g_kl)
 b_kl = Float64.(b_kl)
 
+# TODO: add a brief section about admittance matrix so we are on the same page
 # Build admittance matrix
 Y = zeros(ComplexF64, m, m)
 for idx in 1:length(edges)
@@ -69,6 +73,8 @@ A_upper_bounds = @constraint(model, [i=1:n], A[i] <= max_capacity[i])
 A_lower_bounds = @constraint(model, [i=1:n], A[i] >= 0)
 
 # Upper and lower bounds as constraints for R[i]
+# QUESTION: why was variable broken down into two constaints?
+# @variable(model, -0.03 * max_capacity[i] <= R[i=1:n] <= 0.03 * max_capacity[i])
 R_upper_bounds = @constraint(model, [i=1:n], R[i] <= 0.03 * max_capacity[i])
 R_lower_bounds = @constraint(model, [i=1:n], R[i] >= -0.03 * max_capacity[i])
 
