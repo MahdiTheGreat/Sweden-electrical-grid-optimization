@@ -15,10 +15,10 @@ end
 
 # Function to verify constraints
 function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, G, B, v_values, θ_values, A_values, R_values, voltage_limits, angle_limits, tolerance=1e-6)
-    println("\n--- Constraint Verification ---")
+    println("\n--- Constraint verification ---")
 
-    # 1. Generator Capacity Constraints
-    println("\nGenerator Capacity Constraints:")
+    # Generator capacity constraints
+    println("\nGenerator capacity constraints:")
     local all_gen_constraints = true
     for i in 1:n
         a = A_values[i]
@@ -31,8 +31,8 @@ function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, 
         println("All generator capacity constraints are satisfied.")
     end
 
-    # 2. Reactive Power Constraints
-    println("\nReactive Power Constraints:")
+    # Reactive power constraints
+    println("\nReactive power constraints:")
     local all_reactive_constraints = true
     for i in 1:n
         r = R_values[i]
@@ -45,8 +45,8 @@ function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, 
         println("All reactive power constraints are satisfied.")
     end
 
-    # 3. Voltage Limits
-    println("\nVoltage Limits:")
+    # Voltage limits
+    println("\nVoltage limits:")
     local all_voltage_constraints = true
     for k in 1:m
         v = v_values[k]
@@ -59,8 +59,8 @@ function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, 
         println("All voltage constraints are satisfied.")
     end
 
-    # 4. Angle Limits
-    println("\nAngle Limits:")
+    # Angle limits
+    println("\nAngle limits:")
     local all_angle_constraints = true
     for k in 1:m
         θ_val = θ_values[k]
@@ -73,8 +73,8 @@ function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, 
         println("All angle constraints are satisfied.")
     end
 
-    # 5. Power Balance Constraints
-    println("\nPower Balance Constraints:")
+    # Power balance constraints
+    println("\nPower balance constraints:")
     local all_power_balance = true
     for k in 1:m
         # Calculate P_k and Q_k based on optimized values
@@ -99,7 +99,7 @@ function verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, 
         println("All power balance constraints are satisfied.")
     end
 
-    # Overall Verification Status
+    # Overall verification status
     local overall_status = all_gen_constraints && all_reactive_constraints && all_voltage_constraints && all_angle_constraints && all_power_balance
     if overall_status
         println("\nAll constraints are successfully satisfied within the specified tolerance.")
@@ -195,7 +195,7 @@ optimize!(model)
 # Check solver status
 status = termination_status(model)
 if status == JuMP.OPTIMAL || status == JuMP.LOCALLY_SOLVED
-    # --- Generator Results ---
+    # Generator results
     generator_data = DataFrame(
         Generator = ["G$i" for i in 1:n],
         A_pu = [round(value(A[i]), digits=6) for i in 1:n],
@@ -205,7 +205,7 @@ if status == JuMP.OPTIMAL || status == JuMP.LOCALLY_SOLVED
     )
     CSV.write("generator_results.csv", generator_data)
     
-    # --- Node Voltage Results ---
+    # Node voltage results
     node_voltage_data = DataFrame(
         Node = 1:m,
         v_pu = [round(value(v[k]), digits=6) for k in 1:m],
@@ -213,7 +213,7 @@ if status == JuMP.OPTIMAL || status == JuMP.LOCALLY_SOLVED
     )
     CSV.write("node_voltage_results.csv", node_voltage_data)
     
-    # --- Power Flow Results ---
+    # Power Flow Results
     power_flow_rows = []
     for idx in 1:length(edges)
         (k, l) = edges[idx]
@@ -223,7 +223,7 @@ if status == JuMP.OPTIMAL || status == JuMP.LOCALLY_SOLVED
         θ_l = value(θ[l])
         v_k = value(v[k])
         v_l = value(v[l])
-        # Compute the power flows using the actual line parameters
+        # Compute the power flows
         p_kl = round(v_k^2 * g - v_k * v_l * (g * cos(θ_k - θ_l) + b * sin(θ_k - θ_l)), digits=6)
         p_lk = round(v_l^2 * g - v_l * v_k * (g * cos(θ_l - θ_k) + b * sin(θ_l - θ_k)), digits=6)
         q_kl = round(-v_k^2 * b - v_k * v_l * (g * sin(θ_k - θ_l) - b * cos(θ_k - θ_l)), digits=6)
@@ -233,30 +233,16 @@ if status == JuMP.OPTIMAL || status == JuMP.LOCALLY_SOLVED
     power_flow_data = DataFrame(power_flow_rows)
     CSV.write("power_flow_results.csv", power_flow_data)
     
-    # --- Lagrange Multipliers for Generator Capacity Constraints ---
-    lagrange_rows = []
-    for i in 1:n
-        mu_upper = dual(A_upper_bounds[i])
-        mu_upper_abs = abs(round(mu_upper, digits=0))
-        push!(lagrange_rows, (Generator = "G$i", µ_SEK_pu = mu_upper_abs))
-    end
-    lagrange_data = DataFrame(lagrange_rows)
-    CSV.write("lagrange_multipliers.csv", lagrange_data)
-    
-    println("Optimization results have been saved to CSV files:")
-    println(" - generator_results.csv")
-    println(" - node_voltage_results.csv")
-    println(" - power_flow_results.csv")
-    println(" - lagrange_multipliers.csv")
+    println("Optimization results have been saved to CSV files.")
 
-    # --- Retrieve optimized variable values ---
+    # Retrieve optimized variable values
     A_values = [value(A[i]) for i in 1:n]
     R_values = [value(R[i]) for i in 1:n]
     v_values = [value(v[k]) for k in 1:m]
     θ_values = [value(θ[k]) for k in 1:m]
 
     # Call the verification function
-    verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, G, B, v_values, θ_values, A_values, R_values, voltage_limits, angle_limits, 1e-6)
+    verify_constraints(n, m, GeneratorsAtNode, DemandAtNode, max_capacity, G, B, v_values, θ_values, A_values, R_values, voltage_limits, angle_limits)
 
 else
     println("Solver did not find an optimal solution. Termination status: ", status)
